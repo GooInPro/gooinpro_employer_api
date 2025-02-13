@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.post("/register", registerJobPosting);
 router.put("/edit/:jpno", editJobPosting);
-router.put("/delete/:jpno", deleteJobPosting);
+router.delete("/delete/:jpno", deleteJobPosting);
 router.get("/list", listJobPostings);
 router.get("/:jpno", getOneJobPosting);
 

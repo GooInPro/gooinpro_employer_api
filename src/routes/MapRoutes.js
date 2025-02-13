@@ -1,6 +1,7 @@
 import express from 'express';
 import models from '../models/index.js';
 import axios from 'axios';
+import mapService from '../services/mapService.js';
 
 const router = express.Router();
 
@@ -21,12 +22,15 @@ router.get('/workplace/:eno', async (req, res) => {
     }
 });
 
-// 모든 근무지 조회 엔드포인트 (옵션으로, 거리 필터링도 구현 가능)
+// 모든 근무지 조회 엔드포인트
 router.get('/workplaces', async (req, res) => {
     try {
         const workplaces = await models.WorkPlace.findAll({
+            where: { wdelete: false },
             include: [{
                 model: models.JobPostings,
+                where: { jpdelete: false },
+                required: false,
                 attributes: ['jpname', 'jphourlyRate', 'jpregdate', 'jpenddate']
             }]
         });
@@ -41,6 +45,25 @@ router.get('/workplaces', async (req, res) => {
 router.get('/geocode', async (req, res) => {
     try {
         const { query } = req.query;
+        // 1. DB에서 해당 주소의 좌표 조회
+        const existingLocation = await models.WorkPlace.findOne({
+            where: {
+                wroadAddress: query,
+                wdelete: false
+            }
+        });
+
+        // DB에 있으면 해당 좌표 반환
+        if (existingLocation && existingLocation.wlati && existingLocation.wlong) {
+            return res.json({
+                addresses: [{
+                    x: existingLocation.wlong,
+                    y: existingLocation.wlati
+                }]
+            });
+        }
+
+        // 2. DB에 없는 경우 네이버 API 호출
         const response = await axios.get(
             'https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode',
             {
